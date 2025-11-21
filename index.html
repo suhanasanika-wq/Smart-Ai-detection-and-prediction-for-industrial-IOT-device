@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Industrial Sensor Monitoring Dashboard</title>
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(to right, #f8fafc, #e0f7fa);
+      --left-panel-gradient: linear-gradient(135deg, #ede7f6, #d1c4e9);
+      --center-panel-gradient: linear-gradient(135deg, #e3f2fd, #bbdefb);
+      --right-panel-gradient: linear-gradient(135deg, #fce4ec, #f8bbd0);
+      --header-footer-gradient: linear-gradient(to right, #512da8, #311b92);
+      --alert-gradient: linear-gradient(to right, #fff8e1, #ffecb3);
+      --prediction-gradient: linear-gradient(to right, #e1f5fe, #b3e5fc);
+      --progress-color: #ef5350;
+      --button-bg: #7c4dff;
+      --button-hover: #5e35b1;
+      --text-color: #212121;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-color);
+    }
+
+    header, footer {
+      background: var(--header-footer-gradient);
+      color: white;
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 1.3rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    main {
+      display: flex;
+      gap: 1.5rem;
+      padding: 2rem;
+    }
+
+    .left-panel {
+      background: var(--left-panel-gradient);
+      width: 20%;
+    }
+
+    .center-panel {
+      background: var(--center-panel-gradient);
+      flex: 1;
+      text-align: center;
+    }
+
+    .right-panel {
+      background: var(--right-panel-gradient);
+      width: 25%;
+    }
+
+    .left-panel, .center-panel, .right-panel {
+      border-radius: 14px;
+      padding: 1.5rem;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .alert-box {
+      background: var(--alert-gradient);
+      border-left: 6px solid #ffb300;
+      padding: 1.2rem;
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+    }
+
+    .ai-prediction {
+      background: var(--prediction-gradient);
+      border-left: 6px solid #29b6f6;
+      padding: 1.2rem;
+      border-radius: 10px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    ul li {
+      background: #ce93d8;
+      margin: 0.6rem 0;
+      padding: 0.8rem;
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: center;
+      font-weight: 600;
+      transition: background 0.3s ease-in-out;
+    }
+
+    ul li:hover {
+      background-color: #ba68c8;
+    }
+
+    .history-container {
+      margin-top: 1rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .progress {
+      background: #e0e0e0;
+      border-radius: 20px;
+      height: 22px;
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+
+    .progress-bar {
+      background: var(--progress-color);
+      height: 100%;
+      width: 0%;
+      border-radius: 20px;
+      transition: width 0.6s ease;
+    }
+
+    .download-btn {
+      background-color: var(--button-bg);
+      color: white;
+      padding: 0.8rem 1.6rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background-color 0.3s ease;
+    }
+
+    .download-btn:hover {
+      background-color: var(--button-hover);
+    }
+  </style>
+</head>
+<body>
+  <header><h1>Industrial Sensor Monitoring Dashboard</h1></header>
+
+  <main>
+    <section class="left-panel">
+      <h3>Sensors</h3>
+      <ul>
+        <li onclick="fetchSensorHistory('voltage')">Voltage</li>
+        <li onclick="fetchSensorHistory('temperature')">Temperature</li>
+        <li onclick="fetchSensorHistory('vibration')">Vibration</li>
+        <li onclick="fetchSensorHistory('pressure')">Pressure</li>
+      </ul>
+      <div id="sensorHistory" class="history-container"></div>
+    </section>
+
+    <section class="center-panel">
+      <h3>Live Data Feed</h3>
+      <div id="liveData">Loading...</div>
+    </section>
+
+    <section class="right-panel">
+      <div class="alert-box">
+        <h3>System Alerts</h3>
+        <div id="alertMessage">Checking...</div>
+      </div>
+      <div class="ai-prediction">
+        <h3>AI Hazard Prediction</h3>
+        <div id="aiStatus">Analyzing...</div>
+        <div class="progress"><div id="riskBar" class="progress-bar"></div></div>
+        <p id="riskText">Risk: 0%</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© Sensor System</p>
+    <button class="download-btn" onclick="downloadReport()">Download Report (PDF)</button>
+  </footer>
+
+  <script>
+    async function fetchSensorData() {
+      try {
+        const res = await fetch("http://127.0.0.1:5000/api/sensor-data");
+        const data = await res.json();
+
+        if (data.error) {
+          document.getElementById("liveData").innerText = "Error loading data.";
+          return;
+        }
+
+        document.getElementById("liveData").innerHTML = `
+          <p><strong>Voltage:</strong> ${data.voltage}</p>
+          <p><strong>Temperature:</strong> ${data.temperature}</p>
+          <p><strong>Vibration:</strong> ${data.vibration}</p>
+          <p><strong>Pressure:</strong> ${data.pressure}</p>
+          <p><strong>Timestamp:</strong> ${data.timestamp}</p>
+        `;
+
+        const voltage = parseFloat(data.voltage);
+        const isAbnormal = voltage > 270 || voltage < 220;
+        let risk = 0;
+        if (voltage > 270) risk = Math.min(100, ((voltage - 270) / 30) * 100);
+        if (voltage < 220) risk = Math.min(100, ((220 - voltage) / 30) * 100);
+
+        document.getElementById("alertMessage").innerText = isAbnormal
+          ? "⚠️ Voltage anomaly detected!"
+          : "No anomalies";
+
+        document.getElementById("aiStatus").innerText = isAbnormal
+          ? "Status: UNSAFE"
+          : "Status: Safe";
+
+        document.getElementById("riskBar").style.width = `${Math.floor(risk)}%`;
+        document.getElementById("riskText").innerText = `Risk: ${Math.floor(risk)}%`;
+
+        if (data.email_sent) {
+          alert("⚠️ Alert email has been sent to admin.");
+        }
+      } catch (err) {
+        document.getElementById("liveData").innerText = "Error loading data.";
+      }
+    }
+
+    async function fetchSensorHistory(sensor) {
+      const container = document.getElementById("sensorHistory");
+      container.innerHTML = `<p>Loading ${sensor} history...</p>`;
+      try {
+        const res = await fetch(`http://127.0.0.1:5000/api/sensor-history/${sensor}`);
+        const data = await res.json();
+
+        if (data.error) {
+          container.innerHTML = `<p>Error: ${data.error}</p>`;
+          return;
+        }
+
+        if (data.length === 0) {
+          container.innerHTML = `<p>No recent data for ${sensor}.</p>`;
+          return;
+        }
+
+        container.innerHTML = `<h4>${sensor.toUpperCase()} Readings</h4>` +
+          data.map(entry => `<p>${entry.value} at ${entry.time}</p>`).join('');
+      } catch (err) {
+        container.innerHTML = `<p>Failed to load history.</p>`;
+      }
+    }
+
+    function downloadReport() {
+      window.location.href = "http://127.0.0.1:5000/download/report";
+    }
+
+    fetchSensorData();
+    setInterval(fetchSensorData, 60000);
+  </script>
+</body>
+</html>
